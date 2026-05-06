@@ -35,16 +35,17 @@ app.innerHTML = `
     <p class="loading-text">Memuat Kamera AR...</p>
     <p class="loading-subtext">Pastikan memberikan izin akses kamera</p>
     <button id="start-ar-btn" class="start-ar-btn">Mulai AR</button>
+    <p id="ar-error" class="ar-error"></p>
   </div>
 
   <a-scene
     embedded
-    arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
-    renderer="logarithmicDepthBuffer: true; antialias: true;"
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false"
+    renderer="logarithmicDepth: true; antialias: true; colorManagement: true; sortObjects: true;"
+    arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
   >
-    <a-marker preset="hiro" id="main-marker">
+    <a-marker preset="hiro" id="main-marker" emitevents="true">
       <a-entity id="chess-piece-entity" class="fade-in" animation="property: rotation; to: 0 360 0; loop: true; dur: 10000; easing: linear">
         <a-cone
           position="0 0.4 0"
@@ -98,8 +99,9 @@ const pieceSelector = getByIdOrThrow<HTMLDivElement>('piece-selector')
 const statusDot = getByIdOrThrow<HTMLSpanElement>('status-dot')
 const statusText = getByIdOrThrow<HTMLSpanElement>('status-text')
 const instructionsEl = getByIdOrThrow<HTMLDivElement>('instructions')
-const chessPieceEntity = getByIdOrThrow<HTMLDivElement>('chess-piece-entity')
+const chessPieceEntity = getByIdOrThrow<HTMLElement>('chess-piece-entity')
 const startArBtn = getByIdOrThrow<HTMLButtonElement>('start-ar-btn')
+const arErrorEl = getByIdOrThrow<HTMLParagraphElement>('ar-error')
 
 function createPieceGeometry(pieceId: string): string {
   const pieces: Record<string, string> = {
@@ -142,10 +144,14 @@ pieceSelector.addEventListener('click', (e) => {
 
   if (piece) {
     if (chessPieceEntity) {
-      chessPieceEntity.innerHTML = createPieceGeometry(pieceId)
-      chessPieceEntity.classList.remove('fade-in')
-      void chessPieceEntity.offsetWidth
-      chessPieceEntity.classList.add('fade-in')
+      const entity = chessPieceEntity as any
+      entity.innerHTML = createPieceGeometry(pieceId)
+      entity.removeAttribute('animation')
+      void entity.offsetWidth
+      entity.setAttribute('animation', 'property: rotation; to: 0 360 0; loop: true; dur: 10000; easing: linear')
+      entity.classList.remove('fade-in')
+      void entity.offsetWidth
+      entity.classList.add('fade-in')
     }
 
     if (isMarkerVisible) {
@@ -154,6 +160,13 @@ pieceSelector.addEventListener('click', (e) => {
   }
 })
 
+function updateViewport() {
+  const scene = document.querySelector('a-scene') as any
+  if (scene && scene.renderer) {
+    scene.renderer.setSize(window.innerWidth, window.innerHeight)
+  }
+}
+
 startArBtn.addEventListener('click', async () => {
   if (arStarted) return
   
@@ -161,32 +174,50 @@ startArBtn.addEventListener('click', async () => {
   startArBtn.textContent = 'Memuat...'
   startArBtn.disabled = true
   
-  if (!(window as any).ARjs && !(window as any).AFRAME) {
+  const aframeLoaded = typeof (window as any).AFRAME !== 'undefined'
+  const arjsLoaded = typeof (window as any).ARjs !== 'undefined'
+  console.log('A-Frame loaded:', aframeLoaded)
+  console.log('AR.js loaded:', arjsLoaded)
+  
+  if (!aframeLoaded || !arjsLoaded) {
     startArBtn.textContent = 'AR tidak tersedia'
     statusText.textContent = 'Error'
     statusDot.classList.remove('active')
+    arErrorEl.textContent = 'AR.js atau A-Frame gagal dimuat. Periksa koneksi internet Anda.'
+    arErrorEl.classList.add('visible')
     console.error('AR.js or A-Frame not loaded')
     return
   }
   
-  const sceneEl = document.querySelector('a-scene')
-  if (sceneEl) {
-    const video = sceneEl.querySelector('video')
-    if (video) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: 'environment' } 
-        })
-        stream.getTracks().forEach(track => track.stop())
-        startArBtn.textContent = 'Kamera siap!'
-        setTimeout(() => {
-          loadingEl.style.display = 'none'
-        }, 500)
-      } catch (err) {
-        startArBtn.textContent = 'Izin ditolak'
-        console.warn('Camera permission denied:', err)
-      }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ 
+      video: { 
+        facingMode: 'environment',
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      } 
+    })
+    console.log('Camera stream obtained:', stream.id)
+    stream.getTracks().forEach(track => track.stop())
+    
+    const sceneEl = document.querySelector('a-scene')
+    if (sceneEl) {
+      console.log('A-Frame scene element found, initializing AR...')
     }
+    
+    startArBtn.textContent = 'Kamera siap!'
+    statusDot.classList.add('active')
+    statusText.textContent = 'Siap'
+    setTimeout(() => {
+      loadingEl.style.display = 'none'
+    }, 1500)
+  } catch (err: any) {
+    startArBtn.textContent = 'Izinkan kamera'
+    startArBtn.disabled = false
+    arStarted = false
+    arErrorEl.textContent = 'Camera: ' + (err.message || 'Permission denied')
+    arErrorEl.classList.add('visible')
+    console.error('Camera error:', err)
   }
 })
 
@@ -197,6 +228,7 @@ if (scene) {
     console.log('AR Scene loaded successfully')
     statusDot.classList.add('active')
     statusText.textContent = 'Siap'
+    updateViewport()
   })
 
   scene.addEventListener('arjs-video-start', () => {
@@ -205,10 +237,14 @@ if (scene) {
     statusDot.classList.add('active')
     statusText.textContent = 'Kamera Aktif'
     instructionsEl.style.display = 'block'
+    updateViewport()
   })
+}
 
-  scene.addEventListener('markerFound', () => {
-    console.log('Marker detected!')
+const markerEl = document.querySelector('a-marker')
+if (markerEl) {
+  markerEl.addEventListener('markermatched', () => {
+    console.log('Marker matched!')
     isMarkerVisible = true
     const piece = CHESS_PIECES.find(p => p.id === currentPiece)
     if (piece) {
@@ -217,8 +253,8 @@ if (scene) {
     instructionsEl.textContent = 'Marker terdeteksi! Pilih bidak di bawah'
   })
 
-  scene.addEventListener('markerLost', () => {
-    console.log('Marker lost')
+  markerEl.addEventListener('markerunmatched', () => {
+    console.log('Marker unmatched')
     isMarkerVisible = false
     instructionsEl.textContent = 'Scan marker Hiro untuk menampilkan bidak catur 3D'
   })
@@ -233,26 +269,34 @@ setTimeout(() => {
   }
 }, 10000)
 
+function handleResize() {
+  const width = window.innerWidth
+  const pieceBtns = document.querySelectorAll('.piece-btn')
+  
+  let btnSize = 48
+  if (width < 480) {
+    btnSize = 42
+  } else if (width < 768) {
+    btnSize = 46
+  } else if (width >= 1024) {
+    btnSize = 52
+  }
+  
+  pieceBtns.forEach(btn => {
+    (btn as HTMLButtonElement).style.width = btnSize + 'px'
+    ;(btn as HTMLButtonElement).style.height = btnSize + 'px'
+  })
+  
+  updateViewport()
+}
+
 window.addEventListener('error', (e) => {
   console.warn('AR initialization issue:', e.message)
 })
 
 window.addEventListener('resize', handleResize)
+window.addEventListener('orientationchange', () => {
+  setTimeout(handleResize, 100)
+})
 
-function handleResize() {
-  const width = window.innerWidth
-  const pieceBtns = document.querySelectorAll('.piece-btn')
-  
-  pieceBtns.forEach(btn => {
-    if (width < 480) {
-      (btn as HTMLButtonElement).style.width = '42px'
-      ;(btn as HTMLButtonElement).style.height = '42px'
-    } else if (width < 768) {
-      (btn as HTMLButtonElement).style.width = '46px'
-      ;(btn as HTMLButtonElement).style.height = '46px'
-    } else {
-      (btn as HTMLButtonElement).style.width = '48px'
-      ;(btn as HTMLButtonElement).style.height = '48px'
-    }
-  })
-}
+handleResize()
