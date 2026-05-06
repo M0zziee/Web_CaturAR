@@ -26,6 +26,44 @@ const CHESS_PIECES: ChessPiece[] = [
 let currentPiece = 'pawn'
 let isMarkerVisible = false
 let arStarted = false
+let uiVisible = true
+let lastTapTime = 0
+
+const STORAGE_KEY = 'chessar_ui_visible'
+const PIECE_KEY = 'chessar_last_piece'
+
+function getStoredPiece(): string {
+  try {
+    return localStorage.getItem(PIECE_KEY) || 'pawn'
+  } catch {
+    return 'pawn'
+  }
+}
+
+function savePiece(pieceId: string): void {
+  try {
+    localStorage.setItem(PIECE_KEY, pieceId)
+  } catch {
+    // localStorage not available
+  }
+}
+
+function getStoredUIState(): boolean {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    return stored !== 'false'
+  } catch {
+    return true
+  }
+}
+
+function saveUIState(visible: boolean): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, visible ? 'true' : 'false')
+  } catch {
+    // localStorage not available
+  }
+}
 
 const app = getByIdOrThrow<HTMLDivElement>('app')
 
@@ -61,7 +99,7 @@ app.innerHTML = `
     <a-entity camera></a-entity>
   </a-scene>
 
-  <div class="overlay-ui">
+  <div class="overlay-ui" id="overlay-ui">
     <div class="app-header">
       <h1 class="app-title">♟ ChessAR</h1>
     </div>
@@ -91,9 +129,14 @@ app.innerHTML = `
       `).join('')}
     </div>
   </div>
+
+  <button class="toggle-ui-btn" id="toggle-ui-btn" title="Toggle UI">
+    👁
+  </button>
 `
 
 const loadingEl = getByIdOrThrow<HTMLDivElement>('loading')
+const overlayUiEl = getByIdOrThrow<HTMLDivElement>('overlay-ui')
 const pieceInfoEl = getByIdOrThrow<HTMLDivElement>('piece-info')
 const pieceSelector = getByIdOrThrow<HTMLDivElement>('piece-selector')
 const statusDot = getByIdOrThrow<HTMLSpanElement>('status-dot')
@@ -102,6 +145,7 @@ const instructionsEl = getByIdOrThrow<HTMLDivElement>('instructions')
 const chessPieceEntity = getByIdOrThrow<HTMLElement>('chess-piece-entity')
 const startArBtn = getByIdOrThrow<HTMLButtonElement>('start-ar-btn')
 const arErrorEl = getByIdOrThrow<HTMLParagraphElement>('ar-error')
+const toggleUiBtn = getByIdOrThrow<HTMLButtonElement>('toggle-ui-btn')
 
 function createPieceGeometry(pieceId: string): string {
   const pieces: Record<string, string> = {
@@ -136,6 +180,8 @@ pieceSelector.addEventListener('click', (e) => {
 
   currentPiece = pieceId
   const piece = CHESS_PIECES.find(p => p.id === pieceId)
+
+  savePiece(pieceId)
 
   document.querySelectorAll('.piece-btn').forEach(btn => {
     btn.classList.remove('active')
@@ -200,7 +246,7 @@ startArBtn.addEventListener('click', async () => {
     console.log('Camera stream obtained:', stream.id)
     stream.getTracks().forEach(track => track.stop())
     
-    const sceneEl = document.querySelector('a-scene')
+    const sceneEl = document.querySelector('a-scene') as HTMLElement | null
     if (sceneEl) {
       console.log('A-Frame scene element found, initializing AR...')
     }
@@ -209,8 +255,11 @@ startArBtn.addEventListener('click', async () => {
     statusDot.classList.add('active')
     statusText.textContent = 'Siap'
     setTimeout(() => {
+      if (sceneEl) {
+        sceneEl.classList.remove('hidden')
+      }
       loadingEl.style.display = 'none'
-    }, 1500)
+    }, 1000)
   } catch (err: any) {
     startArBtn.textContent = 'Izinkan kamera'
     startArBtn.disabled = false
@@ -221,9 +270,11 @@ startArBtn.addEventListener('click', async () => {
   }
 })
 
-const scene = document.querySelector('a-scene')
+const scene = document.querySelector('a-scene') as HTMLElement | null
 
 if (scene) {
+  scene.classList.add('hidden')
+  
   scene.addEventListener('loaded', () => {
     console.log('AR Scene loaded successfully')
     statusDot.classList.add('active')
@@ -233,6 +284,7 @@ if (scene) {
 
   scene.addEventListener('arjs-video-start', () => {
     console.log('AR Camera started')
+    scene.classList.remove('hidden')
     loadingEl.style.display = 'none'
     statusDot.classList.add('active')
     statusText.textContent = 'Kamera Aktif'
@@ -270,24 +322,58 @@ setTimeout(() => {
 }, 10000)
 
 function handleResize() {
-  const width = window.innerWidth
-  const pieceBtns = document.querySelectorAll('.piece-btn')
-  
-  let btnSize = 48
-  if (width < 480) {
-    btnSize = 42
-  } else if (width < 768) {
-    btnSize = 46
-  } else if (width >= 1024) {
-    btnSize = 52
-  }
-  
-  pieceBtns.forEach(btn => {
-    (btn as HTMLButtonElement).style.width = btnSize + 'px'
-    ;(btn as HTMLButtonElement).style.height = btnSize + 'px'
-  })
-  
   updateViewport()
+}
+
+function toggleOverlayUI(): void {
+  uiVisible = !uiVisible
+  if (uiVisible) {
+    overlayUiEl.classList.remove('hidden')
+  } else {
+    overlayUiEl.classList.add('hidden')
+  }
+  saveUIState(uiVisible)
+}
+
+toggleUiBtn.addEventListener('click', (e) => {
+  e.stopPropagation()
+  toggleOverlayUI()
+})
+
+let tapTimeout: ReturnType<typeof setTimeout> | null = null
+document.addEventListener('touchend', (e) => {
+  if (!e.target || (e.target as Element).closest('.piece-selector, .app-header, .loading-screen')) return
+  
+  const now = Date.now()
+  if (now - lastTapTime < 300) {
+    if (tapTimeout) {
+      clearTimeout(tapTimeout)
+      tapTimeout = null
+    }
+    toggleOverlayUI()
+  } else {
+    tapTimeout = setTimeout(() => {
+      tapTimeout = null
+    }, 300)
+  }
+  lastTapTime = now
+})
+
+uiVisible = getStoredUIState()
+if (!uiVisible) {
+  overlayUiEl.classList.add('hidden')
+}
+
+currentPiece = getStoredPiece()
+const lastPieceBtn = document.querySelector(`[data-piece="${currentPiece}"]`) as HTMLButtonElement
+if (lastPieceBtn) {
+  document.querySelectorAll('.piece-btn').forEach(btn => btn.classList.remove('active'))
+  lastPieceBtn.classList.add('active')
+  
+  if (chessPieceEntity) {
+    const entity = chessPieceEntity as any
+    entity.innerHTML = createPieceGeometry(currentPiece)
+  }
 }
 
 window.addEventListener('error', (e) => {
