@@ -1,8 +1,8 @@
-<<<<<<< HEAD
+
 
 # Web_CaturAR
 
-=======
+
 
 # ♟ ChessAR - WebAR Chess Piece Visualizer
 
