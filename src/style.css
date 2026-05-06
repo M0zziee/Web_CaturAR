@@ -5,6 +5,8 @@
   --accent-color: #E03E3E;
   --secondary-color: #FAD4D4;
   --text-color: #6b6375;
+  --piece-white: #FFFFFF;
+  --piece-black: #1A1A1A;
 }
 
 * {
@@ -210,6 +212,33 @@ body {
   font-size: 14px;
 }
 
+.start-ar-btn {
+  margin-top: 24px;
+  padding: 14px 32px;
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.start-ar-btn:hover {
+  background: #c42e2e;
+  transform: scale(1.05);
+}
+
+.start-ar-btn:active {
+  transform: scale(0.95);
+}
+
+.start-ar-btn:disabled {
+  background: #999;
+  cursor: not-allowed;
+}
+
 /* Camera Status Indicator */
 .camera-status {
   position: absolute;
@@ -254,6 +283,92 @@ body {
   .app-title {
     font-size: 18px;
   }
+
+  .instructions {
+    font-size: 12px;
+    padding: 8px 14px;
+  }
+}
+
+@media (min-width: 768px) {
+  .piece-btn {
+    width: 52px;
+    height: 52px;
+    font-size: 26px;
+  }
+
+  .piece-selector {
+    padding: 16px 24px;
+    gap: 12px;
+    border-radius: 28px;
+  }
+
+  .app-title {
+    font-size: 24px;
+  }
+
+  .piece-info {
+    font-size: 18px;
+    padding: 16px 32px;
+  }
+
+  .instructions {
+    font-size: 14px;
+    padding: 12px 20px;
+  }
+
+  .camera-status {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .piece-btn {
+    width: 56px;
+    height: 56px;
+    font-size: 28px;
+  }
+
+  .piece-selector {
+    padding: 18px 28px;
+    gap: 14px;
+  }
+
+  .app-title {
+    font-size: 28px;
+  }
+
+  .piece-info {
+    font-size: 20px;
+    padding: 18px 36px;
+  }
+
+  .instructions {
+    font-size: 15px;
+    padding: 14px 24px;
+    bottom: 130px;
+  }
+
+  .piece-selector {
+    bottom: 40px;
+  }
+}
+
+@media (min-width: 1440px) {
+  .piece-btn {
+    width: 60px;
+    height: 60px;
+    font-size: 32px;
+  }
+
+  .piece-selector {
+    padding: 20px 32px;
+  }
+
+  .app-title {
+    font-size: 32px;
+  }
 }
 
 @media (orientation: landscape) and (max-height: 500px) {
@@ -264,5 +379,34 @@ body {
 
   .instructions {
     bottom: 90px;
+  }
+}
+
+@media (orientation: landscape) and (min-width: 768px) {
+  .piece-selector {
+    left: auto;
+    right: 20px;
+    bottom: 50%;
+    transform: translateY(50%);
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .instructions {
+    left: 20px;
+    right: auto;
+    bottom: 50%;
+    transform: translateY(50%);
+  }
+
+  .app-header {
+    width: auto;
+    left: 20px;
+    right: auto;
+  }
+
+  .camera-status {
+    top: 20px;
+    right: 20px;
   }
 }

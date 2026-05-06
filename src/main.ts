@@ -1,5 +1,13 @@
 import './style.css'
 
+function getByIdOrThrow<T extends HTMLElement>(id: string): T {
+  const el = document.getElementById(id) as T | null
+  if (!el) {
+    throw new Error(`Element with id not found: ${id}`)
+  }
+  return el
+}
+
 interface ChessPiece {
   id: string
   symbol: string
@@ -17,14 +25,16 @@ const CHESS_PIECES: ChessPiece[] = [
 
 let currentPiece = 'pawn'
 let isMarkerVisible = false
+let arStarted = false
 
-const app = document.querySelector<HTMLDivElement>('#app')!
+const app = getByIdOrThrow<HTMLDivElement>('app')
 
 app.innerHTML = `
   <div class="loading-screen" id="loading">
     <div class="spinner"></div>
     <p class="loading-text">Memuat Kamera AR...</p>
     <p class="loading-subtext">Pastikan memberikan izin akses kamera</p>
+    <button id="start-ar-btn" class="start-ar-btn">Mulai AR</button>
   </div>
 
   <a-scene
@@ -82,13 +92,14 @@ app.innerHTML = `
   </div>
 `
 
-const loadingEl = document.getElementById('loading')!
-const pieceInfoEl = document.getElementById('piece-info')!
-const pieceSelector = document.getElementById('piece-selector')!
-const statusDot = document.getElementById('status-dot')!
-const statusText = document.getElementById('status-text')!
-const instructionsEl = document.getElementById('instructions')!
-const chessPieceEntity = document.getElementById('chess-piece-entity')!
+const loadingEl = getByIdOrThrow<HTMLDivElement>('loading')
+const pieceInfoEl = getByIdOrThrow<HTMLDivElement>('piece-info')
+const pieceSelector = getByIdOrThrow<HTMLDivElement>('piece-selector')
+const statusDot = getByIdOrThrow<HTMLSpanElement>('status-dot')
+const statusText = getByIdOrThrow<HTMLSpanElement>('status-text')
+const instructionsEl = getByIdOrThrow<HTMLDivElement>('instructions')
+const chessPieceEntity = getByIdOrThrow<HTMLDivElement>('chess-piece-entity')
+const startArBtn = getByIdOrThrow<HTMLButtonElement>('start-ar-btn')
 
 function createPieceGeometry(pieceId: string): string {
   const pieces: Record<string, string> = {
@@ -143,6 +154,42 @@ pieceSelector.addEventListener('click', (e) => {
   }
 })
 
+startArBtn.addEventListener('click', async () => {
+  if (arStarted) return
+  
+  arStarted = true
+  startArBtn.textContent = 'Memuat...'
+  startArBtn.disabled = true
+  
+  if (!(window as any).ARjs && !(window as any).AFRAME) {
+    startArBtn.textContent = 'AR tidak tersedia'
+    statusText.textContent = 'Error'
+    statusDot.classList.remove('active')
+    console.error('AR.js or A-Frame not loaded')
+    return
+  }
+  
+  const sceneEl = document.querySelector('a-scene')
+  if (sceneEl) {
+    const video = sceneEl.querySelector('video')
+    if (video) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: 'environment' } 
+        })
+        stream.getTracks().forEach(track => track.stop())
+        startArBtn.textContent = 'Kamera siap!'
+        setTimeout(() => {
+          loadingEl.style.display = 'none'
+        }, 500)
+      } catch (err) {
+        startArBtn.textContent = 'Izin ditolak'
+        console.warn('Camera permission denied:', err)
+      }
+    }
+  }
+})
+
 const scene = document.querySelector('a-scene')
 
 if (scene) {
@@ -177,6 +224,35 @@ if (scene) {
   })
 }
 
+setTimeout(() => {
+  if (loadingEl && loadingEl.style.display !== 'none') {
+    console.warn('AR load timeout - showing fallback UI')
+    loadingEl.style.display = 'none'
+    statusDot.classList.add('active')
+    statusText.textContent = 'Siap'
+  }
+}, 10000)
+
 window.addEventListener('error', (e) => {
   console.warn('AR initialization issue:', e.message)
 })
+
+window.addEventListener('resize', handleResize)
+
+function handleResize() {
+  const width = window.innerWidth
+  const pieceBtns = document.querySelectorAll('.piece-btn')
+  
+  pieceBtns.forEach(btn => {
+    if (width < 480) {
+      (btn as HTMLButtonElement).style.width = '42px'
+      ;(btn as HTMLButtonElement).style.height = '42px'
+    } else if (width < 768) {
+      (btn as HTMLButtonElement).style.width = '46px'
+      ;(btn as HTMLButtonElement).style.height = '46px'
+    } else {
+      (btn as HTMLButtonElement).style.width = '48px'
+      ;(btn as HTMLButtonElement).style.height = '48px'
+    }
+  })
+}

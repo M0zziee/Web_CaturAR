@@ -1,24 +1,25 @@
-
-
 # Web_CaturAR
 
-
+=======
+bb35c0f (Update: menambahkan komponen AR dan memperbaiki UI)
 
 # ♟ ChessAR - WebAR Chess Piece Visualizer
 
 Aplikasi WebAR untuk memvisualisasikan bidak catur dalam format 3D menggunakan teknologi Augmented Reality di browser mobile.
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Version](https://img.shields.io/badge/version-1.0.1-blue)
 ![License](https://img.shields.io/badge/license-CC0-green)
 
 ## ✨ Fitur
 
 - ✅ **Deteksi Marker Real-time** - Deteksi marker Hiro menggunakan AR.js
 - ✅ **6 Jenis Bidak Catur** - Pawn, Rook, Knight, Bishop, Queen, King
+- ✅ **2 Warna Bidak** - Putih dan Hitam
 - ✅ **UI Interaktif** - Pilih bidak dengan tombol floating
 - ✅ **Animasi 3D** - Fade-in animation + rotasi 360°
 - ✅ **Tooltip Info** - Tampilkan nama bidak saat marker terdeteksi
-- ✅ **Responsive Design** - Kompatibel portrait & landscape
+- ✅ **Responsive Design** - Kompatibel mobile, tablet, dan desktop
+- ✅ **Error Handling** - Null check + fallback mechanism
 - ✅ **Theme Minimalis** - Warna merah-putih (#E03E3E, #FAD4D4)
 
 ## 🛠️ Tech Stack
@@ -27,7 +28,7 @@ Aplikasi WebAR untuk memvisualisasikan bidak catur dalam format 3D menggunakan t
 | ---------- | --------------------------- |
 | Build Tool | Vite 8.0.10                 |
 | Language   | TypeScript                  |
-| AR Engine  | AR.js 2.2.2 + A-Frame 1.4.2 |
+| AR Engine  | AR.js 2.2.2 + A-Frame 1.4.0 |
 | Styling    | Tailwind CSS 4.2.4          |
 | 3D         | A-Frame Primitives          |
 
@@ -95,9 +96,12 @@ npm run preview
 3. **Download/print marker Hiro** dari `public/marker-hiro.html` atau https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/hiro.png
 4. **Arahkan kamera** ke marker hingga objek 3D muncul
 5. **Pilih bidak catur** menggunakan tombol di bagian bawah
-6. Nikmati pengalaman AR!
+6. **Pilih warna** bidak (putih/hitam) sesuai preferensi
+7. Nikmati pengalaman AR!
 
 ## 🎯 Bidak Catur yang Didukung
+
+### Putih
 
 | ID     | Symbol | Nama    | 3D Shape       |
 | ------ | ------ | ------- | -------------- |
@@ -108,6 +112,17 @@ npm run preview
 | queen  | ♛      | Ratu    | Cone + Sphere  |
 | king   | ♚      | Raja    | Cylinder + Box |
 
+### Hitam
+
+| ID     | Symbol | Nama          | 3D Shape       |
+| ------ | ------ | ------------- | -------------- |
+| pawn   | ♙      | Pion Hitam    | Cone           |
+| rook   | ♖      | Benteng Hitam | Box            |
+| knight | ♘      | Kuda Hitam    | Cylinder       |
+| bishop | ♗      | Gajah Hitam   | Cone (tall)    |
+| queen  | ♕      | Ratu Hitam    | Cone + Sphere  |
+| king   | ♔      | Raja Hitam    | Cylinder + Box |
+
 ## 🎨 Desain
 
 ### Color Palette
@@ -115,12 +130,24 @@ npm run preview
 - **Background**: `#FDFBF7` (Off-White)
 - **Primary**: `#E03E3E` (Soft Cherry Red)
 - **Secondary**: `#FAD4D4` (Blush Pink)
+- **White Pieces**: `#FFFFFF` dengan edges `#333333`
+- **Black Pieces**: `#1A1A1A` dengan edges `#000000`
 
 ### Typography
 
 - **Font Family**: Inter, Montserrat
 - **Headings**: Montserrat 600
 - **Body**: Inter 400-500
+
+### Responsiveness
+
+| Device       | Breakpoint | UI Adaptation                 |
+| ------------ | ---------- | ----------------------------- |
+| Mobile Small | < 480px    | Buttons 42px, compact layout  |
+| Mobile       | < 768px    | Buttons 46px                  |
+| Tablet       | < 1024px   | Buttons 48px, larger touch    |
+| Desktop      | > 1024px   | Full layout, keyboard support |
+| Landscape    | -          | Horizontal button layout      |
 
 ## 🔧 Konfigurasi
 
@@ -156,6 +183,23 @@ npm run preview
 2. **Kompatibilitas** - Best performance di Chrome (Android) dan Safari (iOS)
 3. **Lighting** - Pastikan pencahayaan cukup untuk deteksi marker
 4. **Camera Permission** - Jika ditolak, refresh dan coba lagi
+5. **Browser Support** - AR.js tidak bekerja di Firefox (gunakan Chrome/Safari)
+
+## 🔧 Changelog
+
+### v1.0.1 (Mei 2026)
+
+- **FIX**: A-Frame downgrade ke 1.4.0 untuk kompatibilitas AR.js
+- **FIX**: Ganti CDN raw.githack → jsdelivr untuk AR.js
+- **FIX**: Tambah null check dengan error handling
+- **FIX**: Tambah loading timeout fallback (10 detik)
+- **ENH**: Tambah dukungan bidak putih dan hitam
+- **ENH**: Tambah responsive breakpoints untuk tablet/desktop
+- **ENH**: Tambah resize handler untuk dynamic UI
+
+### v1.0.0 (Mei 2026)
+
+- Initial release
 
 ## 🔜 Roadmap
 
@@ -165,6 +209,7 @@ npm run preview
 - [ ] Animasi pergerakan bidak
 - [ ] PWA support (offline capability)
 - [ ] AI chess game integration
+- [ ] Multiplayer chessAR mode
 
 ## 📄 License
 
@@ -174,6 +219,7 @@ CC0 - Public Domain
 
 - Created: Mei 2026
 - Project: ChessAR Web Experience
+- Version: 1.0.1
 
 ## 🙏 Acknowledgments
 
